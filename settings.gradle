@@ -1,0 +1,2 @@
+rootProject.name = 'sdn-sdk-java'
+include 'examples'

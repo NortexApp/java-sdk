@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.sending'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+//        url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+        url 'https://s01.oss.sonatype.org/content/repositories/releases/'
+    }
+}
+
+dependencies {
+//    implementation project(path: ':')
+    implementation 'io.github.sending-network:sdn-sdk-java:0.1.0'
+    implementation 'org.yaml:snakeyaml:2.0'
+
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}

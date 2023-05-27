@@ -1,0 +1,82 @@
+plugins {
+    id 'java-library'
+    id 'signing'
+    id 'maven-publish'
+    id('io.github.gradle-nexus.publish-plugin') version '1.1.0'
+}
+
+group = 'io.github.sending-network'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.json:json:20230227'
+    implementation 'org.web3j:crypto:4.8.7'
+    implementation 'com.squareup.okio:okio:3.2.0'
+
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username = ossrhUsername
+            password = ossrhPassword
+        }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            pom {
+                name = 'sdn-sdk-java'
+                description = 'sdn-sdk-java'
+                url = 'https://github.com/Sending-Network/sendingnetwork-java-sdk'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'DelmoreCooper'
+                        name = 'DelmoreCooper'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/Sending-Network/sendingnetwork-java-sdk'
+                    connection = 'scm:git://github.com/Sending-Network/sendingnetwork-java-sdk.git'
+                    developerConnection = 'scm:git://github.com/Sending-Network/sendingnetwork-java-sdk.git'
+                }
+            }
+        }
+    }
+}
+
+
+signing {
+    useInMemoryPgpKeys(
+            getProperty('signing.keyId') as String,
+            getProperty('signing.key') as String,
+            getProperty('signing.password') as String
+    )
+    sign publishing.publications
+}

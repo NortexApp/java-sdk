@@ -23,15 +23,27 @@ public class Client {
     private final Syncee syncee;
 
     public LoginData loginDID(String address, String privateKey) throws IOException {
+
+        // query did list
+        String queryDidRespRaw = httpHelper.sendRequest(host, HttpHelper.URLs.did_address + address, null, false, "GET");
+        JSONObject queryDidResp = new JSONObject(queryDidRespRaw);
+        JSONArray didList = queryDidResp.getJSONArray("data");
+
+        // pre login
         JSONObject preLoginReq = new JSONObject();
-        preLoginReq.put("address", address);
-        String preLoginResp = httpHelper.sendRequest(host, HttpHelper.URLs.did_pre_login, preLoginReq, true, "POST");
+        if (didList.length() > 0) {
+            preLoginReq.put("did", didList.getString(0));
+        } else {
+            preLoginReq.put("address", address);
+        }
+        String preLoginResp = httpHelper.sendRequest(host, HttpHelper.URLs.did_pre_login, preLoginReq, false, "POST");
         JSONObject resp = new JSONObject(preLoginResp);
         if (resp.has("response") && resp.getString("response").equals("error")) {
             System.err.println("preLogin error: " + resp.getInt("code"));
             return null;
         }
 
+        // sign message
         String did = resp.getString("did");
         String message = resp.getString("message");
         String randomServer = resp.getString("random_server");
@@ -44,6 +56,7 @@ public class Client {
         outputStream.write(ethSignature.getV());
         String sig = bytesToHex(outputStream.toByteArray());
 
+        // login
         JSONObject loginIdentifier = new JSONObject();
         loginIdentifier.put("did", did);
         loginIdentifier.put("address", did);

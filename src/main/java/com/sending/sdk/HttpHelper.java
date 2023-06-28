@@ -13,8 +13,9 @@ public class HttpHelper {
     public static class URLs{
         private static final String root = "_api/";
         public static String client = root+"client/r0/";
-        public static String did_pre_login = root+"client/unstable/did/pre_login1";
-        public static String did_login = root+"client/unstable/did/login";
+        public static String did_address = client+"address/";
+        public static String did_pre_login = client+"did/pre_login1";
+        public static String did_login = client+"did/login";
         public static String logout = client+"logout";
         public static String rooms = client+"rooms/";
         public static String sync = client+"sync";

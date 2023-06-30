@@ -290,4 +290,24 @@ public class Client {
     public boolean isLoggedIn() {
         return isLoggedIn;
     }
+
+    public String getDisplayname() throws IOException {
+        String url = HttpHelper.URLs.client + "profile/" + this.loginData.getUser_id() + "/displayname";
+        String resp = httpHelper.sendRequest(host, url, null, true, "GET");
+
+        String displayname = "";
+        try {
+            displayname = new JSONObject(resp).getString("displayname");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return displayname;
+    }
+
+    public void setDisplayname(String displayname) throws IOException {
+        JSONObject reqObj = new JSONObject();
+        reqObj.put("displayname", displayname);
+        String url = HttpHelper.URLs.client + "profile/" + this.loginData.getUser_id() + "/displayname";
+        httpHelper.sendRequest(host, url, reqObj, true, "PUT");
+    }
 }

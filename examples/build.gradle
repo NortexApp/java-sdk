@@ -15,7 +15,7 @@ repositories {
 
 dependencies {
 //    implementation project(path: ':')
-    implementation 'io.github.sending-network:sdn-sdk-java:0.1.2'
+    implementation 'io.github.sending-network:sdn-sdk-java:0.1.3'
     implementation 'org.yaml:snakeyaml:2.0'
 
     testImplementation platform('org.junit:junit-bom:5.9.1')

@@ -59,7 +59,7 @@ public class Client {
         // login
         JSONObject loginIdentifier = new JSONObject();
         loginIdentifier.put("did", did);
-        loginIdentifier.put("address", did);
+        loginIdentifier.put("address", address);
         loginIdentifier.put("message", message);
         loginIdentifier.put("token", sig);
         JSONObject loginReq = new JSONObject();

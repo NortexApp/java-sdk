@@ -1,5 +1,6 @@
 package com.sending.sdk;
 
+import com.sending.sdk.exceptions.SDNException;
 import com.sending.sdk.models.LoginData;
 import com.sending.sdk.models.*;
 import com.sending.sdk.callbacks.*;
@@ -14,6 +15,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Client {
     private String host;
@@ -21,6 +24,7 @@ public class Client {
     private boolean isLoggedIn = false;
     private final HttpHelper httpHelper;
     private final Syncee syncee;
+    private final Logger LOGGER = Logger.getLogger("sdn-sdk-java");
 
     public LoginData loginDID(String address, String privateKey) throws IOException {
 
@@ -39,7 +43,7 @@ public class Client {
         String preLoginResp = httpHelper.sendRequest(host, HttpHelper.URLs.did_pre_login, preLoginReq, false, "POST");
         JSONObject resp = new JSONObject(preLoginResp);
         if (resp.has("response") && resp.getString("response").equals("error")) {
-            System.err.println("preLogin error: " + resp.getInt("code"));
+            LOGGER.warning("preLogin error: " + resp.getInt("code"));
             return null;
         }
 
@@ -73,7 +77,7 @@ public class Client {
         LoginData loginData = new LoginData();
         if (loginRespObj.has("response") && loginRespObj.getString("response").equals("error")) {
             loginData.setSuccess(false);
-            System.err.println("login error: " + loginRespObj.getInt("code"));
+            LOGGER.warning("login error: " + loginRespObj.getInt("code"));
         } else {
             loginData.setSuccess(true);
             loginData.setAccess_token(loginRespObj.getString("access_token"));
@@ -109,9 +113,9 @@ public class Client {
     }
 
     public void logout() throws IOException {
-        if (!isLoggedIn)
-            return;
-
+        if (!isLoggedIn) {
+            throw new SDNException("client is not logged in");
+        }
         httpHelper.sendRequestAsync(host, HttpHelper.URLs.logout, null, data -> {
             this.isLoggedIn = false;
         });
@@ -133,16 +137,16 @@ public class Client {
     }
 
     public void leaveRoom(String roomID) throws IOException {
-        if (!isLoggedIn)
-            return;
-
+        if (!isLoggedIn) {
+            throw new SDNException("client is not logged in");
+        }
         httpHelper.sendRequest(host, HttpHelper.URLs.rooms + roomID + "/leave", null, true, "POST");
     }
 
     public String sendMessage(String roomID, String message) throws IOException {
-        if (!isLoggedIn)
-            return null;
-
+        if (!isLoggedIn) {
+            throw new SDNException("client is not logged in");
+        }
         JSONObject data = new JSONObject();
         data.put("msgtype", "m.text");
         data.put("body", message);
@@ -156,15 +160,16 @@ public class Client {
         try {
             eventId = new JSONObject(resp).getString("event_id");
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "error parse json response", e);
+            throw new SDNException(e.getMessage());
         }
         return eventId;
     }
 
     public void inviteUser(String roomID, String userId, String reason) throws IOException {
-        if (!isLoggedIn)
-            return;
-
+        if (!isLoggedIn) {
+            throw new SDNException("client is not logged in");
+        }
         JSONObject ob = new JSONObject();
         ob.put("user_id", userId);
         if (reason != null) {
@@ -175,9 +180,9 @@ public class Client {
     }
 
     public void kickUser(String roomID, String userID, String reason) throws IOException {
-        if (!isLoggedIn)
-            return;
-
+        if (!isLoggedIn) {
+            throw new SDNException("client is not logged in");
+        }
         JSONObject ob = new JSONObject();
         ob.put("reason", reason);
         ob.put("user_id", userID);
@@ -186,8 +191,9 @@ public class Client {
     }
 
     public List<Room> getRooms() throws IOException {
-        if (!isLoggedIn)
-            return null;
+        if (!isLoggedIn) {
+            throw new SDNException("client is not logged in");
+        }
         List<Room> rooms = new ArrayList<>();
         String resp = httpHelper.sendRequest(host, HttpHelper.URLs.client + "joined_rooms", null, true, "GET");
         try {
@@ -196,14 +202,16 @@ public class Client {
                 rooms.add(new Room((String)roomId));
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "error parse json response", e);
+            throw new SDNException(e.getMessage());
         }
         return rooms;
     }
 
     public List<Member> getRoomMembers(String roomID) throws IOException {
-        if (!isLoggedIn)
-            return null;
+        if (!isLoggedIn) {
+            throw new SDNException("client is not logged in");
+        }
         List<Member> members = new ArrayList<>();
         String resp = httpHelper.sendRequest(host, HttpHelper.URLs.rooms + roomID + "/joined_members", null, true, "GET");
         try {
@@ -224,15 +232,16 @@ public class Client {
                 ));
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "error parse json response", e);
+            throw new SDNException(e.getMessage());
         }
         return members;
     }
 
     public String createRoom(String name, String topic, List<String> invitations) throws IOException {
-        if (!isLoggedIn)
-            return null;
-
+        if (!isLoggedIn) {
+            throw new SDNException("client is not logged in");
+        }
         JSONObject object = new JSONObject();
         object.put("name", name);
         if(topic != null){
@@ -253,11 +262,10 @@ public class Client {
         String resp = httpHelper.sendRequest(host, HttpHelper.URLs.client + "createRoom", data, true, "POST");
         try {
             JSONObject object = new JSONObject(resp);
-            if(object.has("room_id")) {
-                roomId = object.getString("room_id");
-            }
-        } catch (JSONException ee) {
-            ee.printStackTrace();
+            roomId = object.getString("room_id");
+        } catch (JSONException e) {
+            LOGGER.log(Level.SEVERE, "error parse json response", e);
+            throw new SDNException(e.getMessage());
         }
         return roomId;
     }
@@ -299,7 +307,8 @@ public class Client {
         try {
             displayname = new JSONObject(resp).getString("displayname");
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "error parse json response", e);
+            throw new SDNException(e.getMessage());
         }
         return displayname;
     }

@@ -1,6 +1,8 @@
 package com.sending.sdk;
 
 import com.sending.sdk.callbacks.DataCallback;
+import com.sending.sdk.exceptions.SDNException;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -8,6 +10,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class HttpHelper {
     public static class URLs{
@@ -21,18 +25,16 @@ public class HttpHelper {
         public static String sync = client+"sync";
         public static String user  = client+"user/";
     }
+    private final Logger LOGGER = Logger.getLogger("sdn-sdk-java");
     private String access_token;
 
     public void setAccess_token(String access_token) {
         this.access_token = access_token;
     }
 
-    public String sendRequest(String host, String path, JSONObject data, boolean useAccesstoken, String requestMethod) throws IOException {
-        String surl = host+path + (useAccesstoken ? "?access_token="+access_token  : "");
-        /*if(!path.contains("sync")){
-            System.out.println(surl);
-        }*/
-        URL obj = new URL(surl);
+    public String sendRequest(String host, String path, JSONObject data, boolean useAccessToken, String requestMethod) throws IOException {
+        String url = host+path + (useAccessToken ? "?access_token="+access_token  : "");
+        URL obj = new URL(url);
         URLConnection con = obj.openConnection();
         HttpURLConnection http = (HttpURLConnection)con;
         http.setRequestMethod(requestMethod);
@@ -51,21 +53,36 @@ public class HttpHelper {
                 os.write(data.toString().getBytes());
             }
         }
+        int responseCode = http.getResponseCode();
 
-        try(BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
+        String respStr = "";
+        try(BufferedReader br = new BufferedReader(new InputStreamReader(
+                responseCode >= 200 && responseCode < 300 ? http.getInputStream() : http.getErrorStream(), StandardCharsets.UTF_8))) {
             StringBuilder response = new StringBuilder();
             String responseLine = null;
             while ((responseLine = br.readLine()) != null) {
                 response.append(responseLine.trim());
             }
-            return response.toString();
+            respStr = response.toString();
         }catch (IOException e){
-            System.err.println(e);
-            return "{\n" +
-                    "  \"response\":\"error\",\n" +
-                    "  \"code\":"+http.getResponseCode()+"\n" +
-                    "}";
+            throw new SDNException(Integer.toString(responseCode), e.getMessage());
         }
+
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            LOGGER.warning(String.format("get response code %d for %s", responseCode, host+path));
+
+            SDNException sdnException;
+            try {
+                JSONObject respJson = new JSONObject(respStr);
+                sdnException = new SDNException(respJson.getString("errcode"), respJson.getString("error"));
+            } catch (JSONException e) {
+                LOGGER.log(Level.WARNING, "invalid json response", e);
+                sdnException = new SDNException(Integer.toString(responseCode), respStr);
+            }
+            throw sdnException;
+        }
+
+        return respStr;
     }
 
     public String sendStream(String host, String path, String contentType, InputStream data, int contentLength, boolean useAccesstoken, String requestMethod) throws IOException {
@@ -112,7 +129,7 @@ public class HttpHelper {
 
     public void sendStreamAsync(String host, String path, String contentType, int contentLength, InputStream data, boolean useAccesstoken, String requestMethod, DataCallback callback) throws IOException {
         if(callback == null){
-            System.err.println("callback must not be null!");
+            LOGGER.log(Level.WARNING, "callback must not be null!");
             return;
         }
         new Thread(() -> {
@@ -120,7 +137,7 @@ public class HttpHelper {
                 String res = sendStream(host,path,contentType,data, contentLength, useAccesstoken,requestMethod);
                 callback.onData(res);
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "error send stream", e);
             }
         }).start();
     }
@@ -135,7 +152,7 @@ public class HttpHelper {
 
     public void sendRequestAsync(String host, String path, JSONObject data, DataCallback callback, boolean useAccesstoken, String requestMethod) throws IOException {
         if(callback == null){
-            System.err.println("callback must not be null!");
+            LOGGER.log(Level.WARNING, "callback must not be null!");
             return;
         }
         new Thread(() -> {
@@ -143,7 +160,7 @@ public class HttpHelper {
                 String res = sendRequest(host,path,data,useAccesstoken,requestMethod);
                 callback.onData(res);
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "error send stream", e);
             }
         }).start();
     }

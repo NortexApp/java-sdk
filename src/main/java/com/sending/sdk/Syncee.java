@@ -10,6 +10,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Syncee {
 
@@ -19,6 +21,7 @@ public class Syncee {
     private final HttpHelper httpHelper;
     private final List<RoomEventsCallback> roomEvents = new ArrayList<>();
     private String filterID = null;
+    private final Logger LOGGER = Logger.getLogger("sdn-sdk-java");
 
     public Syncee(Client c, HttpHelper httpHelper) {
         this.c = c;
@@ -55,14 +58,14 @@ public class Syncee {
                             filterIDResponse.onData(object1data.getString("filter_id"));
                         }
                     } else {
-                        System.err.println("Error getting filter!");
+                        LOGGER.warning("error getting filter");
                     }
                 } catch (JSONException e) {
-                    e.printStackTrace();
+                    LOGGER.log(Level.SEVERE, "error getting filter", e);
                 }
             }, true, "POST");
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "error getting filter", e);
         }
     }
 
@@ -88,7 +91,7 @@ public class Syncee {
                         nextURL = baseurl + "&since=" + file_next_batch;
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOGGER.log(Level.SEVERE, "error reading next_batch", e);
                 }
                 if (nextURL.trim().length() == 0) {
                     nextURL = baseurl;
@@ -97,7 +100,7 @@ public class Syncee {
                     try {
                         Thread.sleep(200);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        LOGGER.log(Level.SEVERE, "sleep interrupted", e);
                     }
 
                     String data;
@@ -105,7 +108,7 @@ public class Syncee {
                     try {
                         data = httpHelper.sendRequest(c.getHost(), nextURL, null, false, "GET");
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        LOGGER.log(Level.SEVERE, "error reading next_batch", e);
                         continue;
                     }
 
@@ -125,9 +128,8 @@ public class Syncee {
 
                                 nextURL = baseurl + "&since=" + nextBatch;
                             }
-                        } catch (JSONException | IOException ea) {
-                            ea.printStackTrace();
-                            continue;
+                        } catch (JSONException | IOException e) {
+                            LOGGER.log(Level.SEVERE, "error parsing sync response", e);
                         }
                     }
                 }

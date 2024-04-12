@@ -9,11 +9,14 @@ import java.io.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
-public class Main {
+public class BotExample {
+    private static final Logger LOGGER = Logger.getLogger(BotExample.class.getName());
+
     public static void main(String[] args) throws IOException {
         String configFile = "config.yaml";
         DumperOptions options = new DumperOptions();
@@ -30,13 +33,13 @@ public class Main {
         } else {
             LoginData loginData = c.loginDID((String)config.get("wallet_address"), (String)config.get("private_key"));
             if (loginData.isSuccess()) {
-                System.out.println("logging in success: " + loginData.getAccess_token());
+                LOGGER.info("logging in success: " + loginData.getAccess_token());
                 config.put("user_id", loginData.getUser_id());
                 config.put("access_token", loginData.getAccess_token());
                 config.put("device_id", loginData.getDevice_id());
                 yaml.dump(config, new BufferedWriter(new FileWriter(configFile)));
             } else {
-                System.err.println("error logging in");
+                LOGGER.info("error logging in");
             }
         }
 
